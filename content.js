@@ -330,8 +330,19 @@ window.addEventListener("message", (event) => {
         mediaContainer.appendChild(link);
         mediaContainer.appendChild(iframe);
         
-        // Send image URL to background script for Python API
-        chrome.runtime.sendMessage({ type: "API_SEND_RESULT", image: url });
+        // Fetch image as blob and send base64 to Python API so it can host it publicly
+        fetch(url)
+            .then(res => res.blob())
+            .then(blob => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    chrome.runtime.sendMessage({ type: "API_SEND_RESULT", image: url, image_data: reader.result });
+                };
+                reader.readAsDataURL(blob);
+            }).catch(e => {
+                // Fallback to just URL if fetch fails
+                chrome.runtime.sendMessage({ type: "API_SEND_RESULT", image: url });
+            });
 
     } else if (event.data.type === "STREAM_DONE") {
         // When stream finishes, send the final text to background script for Python API

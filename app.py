@@ -1,22 +1,44 @@
 import os
 import time
 import subprocess
-from flask import Flask, request, jsonify
-from flask_cors import CORS
 import threading
+import base64
+import uuid
+from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)  # Allow extension to make requests
+
+# Create temp directory for images
+TEMP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'temp')
+os.makedirs(TEMP_DIR, exist_ok=True)
 
 # State variables
 current_prompt = None
 latest_result = None
 
+def schedule_deletion(filepath, delay=900):
+    """Deletes a file after a specified delay in seconds (default 15 mins)"""
+    def delete_task():
+        time.sleep(delay)
+        if os.path.exists(filepath):
+            try:
+                os.remove(filepath)
+                print(f"[System] Deleted temp file: {filepath}")
+            except Exception as e:
+                print(f"[System] Failed to delete file: {e}")
+    
+    threading.Thread(target=delete_task, daemon=True).start()
+
+@app.route('/temp/<path:filename>')
+def serve_temp_file(filename):
+    return send_from_directory(TEMP_DIR, filename)
+
 @app.route('/api/prompt', methods=['GET'])
 def get_prompt():
     global current_prompt
     if current_prompt:
-        # Give the prompt to the extension, then clear it so we don't send it twice
         prompt_to_send = current_prompt
         current_prompt = None
         return jsonify({"prompt": prompt_to_send})
@@ -39,8 +61,37 @@ def set_prompt():
 def receive_result():
     global latest_result
     data = request.json
-    latest_result = data
     print(f"\n[API] Received Result from ChatGPT Extension!")
+    
+    # Process image data if available
+    if 'image_data' in data:
+        try:
+            # Extract base64 part (data:image/png;base64,iVBORw0KGgo...)
+            header, encoded = data['image_data'].split(',', 1)
+            file_ext = 'png'
+            if 'jpeg' in header: file_ext = 'jpg'
+            elif 'webp' in header: file_ext = 'webp'
+            
+            filename = f"img_{uuid.uuid4().hex}.{file_ext}"
+            filepath = os.path.join(TEMP_DIR, filename)
+            
+            with open(filepath, "wb") as f:
+                f.write(base64.b64decode(encoded))
+            
+            # Replace the private image_url with our public hosted URL
+            public_url = f"http://198.105.113.144:5000/temp/{filename}"
+            data['image_url'] = public_url
+            del data['image_data'] # Don't need to keep the huge base64 string in memory
+            
+            print(f"Saved Image Locally: {filepath}")
+            print(f"Public URL (Self-Destructs in 15m): {public_url}")
+            
+            # Schedule deletion in 15 minutes (900 seconds)
+            schedule_deletion(filepath, 900)
+        except Exception as e:
+            print(f"Failed to process image data: {e}")
+    
+    latest_result = data
     if 'text' in data:
         print(f"Text Preview: {data['text'][:100]}...")
     if 'image_url' in data:

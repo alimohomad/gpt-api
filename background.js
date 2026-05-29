@@ -36,6 +36,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const payload = {};
         if (message.text) payload.text = message.text;
         if (message.image) payload.image_url = message.image;
+        if (message.image_data) payload.image_data = message.image_data;
 
         fetch(`${API_BASE}/result`, {
             method: "POST",
