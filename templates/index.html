@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StreamInsight AI Interface</title>
+    <!-- Include Marked.js for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --chat-bg: rgba(20, 25, 40, 0.6);
+            --primary: #00e5ff;
+            --primary-glow: rgba(0, 229, 255, 0.5);
+            --user-msg: rgba(0, 229, 255, 0.15);
+            --ai-msg: rgba(255, 255, 255, 0.05);
+            --text-main: #e2e8f0;
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at top right, rgba(0, 229, 255, 0.1), transparent 40%),
+                              radial-gradient(circle at bottom left, rgba(138, 43, 226, 0.1), transparent 40%);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 900px;
+            height: 90vh;
+            background: var(--chat-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .header {
+            padding: 20px 30px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            background: rgba(0,0,0,0.2);
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #fff;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header h1::before {
+            content: '';
+            display: block;
+            width: 12px;
+            height: 12px;
+            background: var(--primary);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+
+        .messages {
+            flex-grow: 1;
+            padding: 30px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            scroll-behavior: smooth;
+        }
+
+        .messages::-webkit-scrollbar {
+            width: 6px;
+        }
+        .messages::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 15px 20px;
+            border-radius: 15px;
+            line-height: 1.6;
+            animation: fadeIn 0.4s ease-out forwards;
+            opacity: 0;
+            transform: translateY(10px);
+            word-wrap: break-word;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: var(--user-msg);
+            border: 1px solid rgba(0, 229, 255, 0.3);
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.ai {
+            align-self: flex-start;
+            background: var(--ai-msg);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom-left-radius: 4px;
+        }
+
+        .message.ai p { margin-bottom: 10px; }
+        .message.ai p:last-child { margin-bottom: 0; }
+        
+        .message.ai img {
+            max-width: 100%;
+            border-radius: 10px;
+            margin-top: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 1px solid var(--border-color);
+        }
+
+        .message.ai code {
+            background: rgba(0,0,0,0.4);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #ff79c6;
+            font-family: monospace;
+        }
+
+        .message.ai pre {
+            background: rgba(0,0,0,0.5);
+            padding: 15px;
+            border-radius: 10px;
+            overflow-x: auto;
+            margin: 10px 0;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .message.ai pre code {
+            background: none;
+            color: #bd93f9;
+            padding: 0;
+        }
+
+        .input-container {
+            padding: 20px 30px;
+            background: rgba(0,0,0,0.3);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .input-box {
+            flex-grow: 1;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 25px;
+            padding: 15px 25px;
+            color: #fff;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .input-box:focus {
+            border-color: var(--primary);
+            background: rgba(0, 229, 255, 0.02);
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.1);
+        }
+
+        .send-btn {
+            background: var(--primary);
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #000;
+            box-shadow: 0 0 15px var(--primary-glow);
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 25px var(--primary-glow);
+        }
+
+        .send-btn:disabled {
+            background: #555;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        .loading-dots {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            height: 20px;
+        }
+
+        .loading-dots div {
+            width: 8px;
+            height: 8px;
+            background: var(--primary);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .loading-dots div:nth-child(1) { animation-delay: -0.32s; }
+        .loading-dots div:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); box-shadow: 0 0 10px var(--primary-glow); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="chat-container">
+        <div class="header">
+            <h1>StreamInsight Core</h1>
+        </div>
+        
+        <div class="messages" id="chat-messages">
+            <!-- Messages will appear here -->
+            <div class="message ai">
+                <p>System Online. Automation bridge established. How can I help you today?</p>
+            </div>
+        </div>
+
+        <div class="input-container">
+            <input type="text" id="prompt-input" class="input-box" placeholder="Ask a question or generate an image..." autocomplete="off">
+            <button id="send-btn" class="send-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "http://198.105.113.144:5000/api";
+        const messagesDiv = document.getElementById('chat-messages');
+        const inputField = document.getElementById('prompt-input');
+        const sendBtn = document.getElementById('send-btn');
+        let pollingInterval = null;
+        let isWaitingForResponse = false;
+
+        function addMessage(content, sender, isHtml = false) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${sender}`;
+            if (isHtml) {
+                msgDiv.innerHTML = content;
+            } else {
+                msgDiv.textContent = content;
+            }
+            messagesDiv.appendChild(msgDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            return msgDiv;
+        }
+
+        function addLoadingIndicator() {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'message ai';
+            msgDiv.id = 'loading-indicator';
+            msgDiv.innerHTML = `
+                <div class="loading-dots">
+                    <div></div><div></div><div></div>
+                </div>
+            `;
+            messagesDiv.appendChild(msgDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function removeLoadingIndicator() {
+            const loader = document.getElementById('loading-indicator');
+            if (loader) loader.remove();
+        }
+
+        async function sendPrompt() {
+            if (isWaitingForResponse) return;
+            const text = inputField.value.trim();
+            if (!text) return;
+
+            // Clear input and show user message
+            inputField.value = '';
+            addMessage(text, 'user');
+            
+            // Disable input while waiting
+            isWaitingForResponse = true;
+            sendBtn.disabled = true;
+            inputField.disabled = true;
+
+            // Send POST to Python API
+            try {
+                await fetch(`${API_URL}/prompt`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: text })
+                });
+
+                addLoadingIndicator();
+                
+                // Start polling for result
+                pollForResult();
+            } catch (err) {
+                console.error("Error sending prompt:", err);
+                addMessage("Connection error to Python API.", 'ai');
+                resetState();
+            }
+        }
+
+        function pollForResult() {
+            if (pollingInterval) clearInterval(pollingInterval);
+            
+            pollingInterval = setInterval(async () => {
+                try {
+                    const res = await fetch(`${API_URL}/result`);
+                    const data = await res.json();
+
+                    if (data.status !== "waiting") {
+                        // We got a result! Stop polling
+                        clearInterval(pollingInterval);
+                        removeLoadingIndicator();
+
+                        // Render image or text
+                        if (data.image_url) {
+                            addMessage(`<img src="${data.image_url}" alt="Generated Image" />`, 'ai', true);
+                        } else if (data.text) {
+                            // Parse markdown
+                            const parsed = marked.parse(data.text);
+                            addMessage(parsed, 'ai', true);
+                        } else {
+                            addMessage("Received empty response.", 'ai');
+                        }
+
+                        // Clear the result on the server so we don't fetch it again later
+                        // (Alternatively, the server clears it upon GET. We can also POST an ack, but let's assume it handles it)
+
+                        resetState();
+                    }
+                } catch (err) {
+                    console.error("Polling error:", err);
+                }
+            }, 1000); // Check every second
+        }
+
+        function resetState() {
+            isWaitingForResponse = false;
+            sendBtn.disabled = false;
+            inputField.disabled = false;
+            inputField.focus();
+        }
+
+        sendBtn.addEventListener('click', sendPrompt);
+        inputField.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') sendPrompt();
+        });
+    </script>
+</body>
+</html>

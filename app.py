@@ -50,8 +50,12 @@ def receive_result():
 
 @app.route('/api/result', methods=['GET'])
 def check_result():
+    global latest_result
     if latest_result:
-        return jsonify(latest_result)
+        # Give the result to the frontend and clear it
+        res = latest_result
+        latest_result = None
+        return jsonify(res)
     return jsonify({"status": "waiting"})
 
 def open_browser():
