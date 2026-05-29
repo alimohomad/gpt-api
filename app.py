@@ -31,7 +31,7 @@ def set_prompt():
         return jsonify({"error": "No prompt provided"}), 400
     
     current_prompt = data['prompt']
-    latest_result = {} # Clear previous result
+    latest_result = None # Clear previous result
     print(f"\n[API] New Prompt Queued for ChatGPT: {current_prompt}")
     return jsonify({"status": "success", "message": "Prompt queued"})
 
@@ -39,31 +39,22 @@ def set_prompt():
 def receive_result():
     global latest_result
     data = request.json
-    if latest_result is None:
-        latest_result = {}
-        
+    latest_result = data
+    print(f"\n[API] Received Result from ChatGPT Extension!")
     if 'text' in data:
-        latest_result['text'] = data['text']
-        print(f"\n[API] Received Text Preview: {data['text'][:100]}...")
+        print(f"Text Preview: {data['text'][:100]}...")
     if 'image_url' in data:
-        latest_result['image_url'] = data['image_url']
-        print(f"\n[API] Received Image URL: {data['image_url']}")
-        
+        print(f"Image URL: {data['image_url']}")
+    
     return jsonify({"status": "success"})
 
 @app.route('/api/result', methods=['GET'])
 def check_result():
     global latest_result
-    # Only return if we have at least something, though for n8n we might want to wait until both?
-    # Actually, we just return whatever is there.
-    if latest_result and ('text' in latest_result or 'image_url' in latest_result):
-        # We don't pop it immediately if it's incomplete, but it's hard to know if it's complete.
-        # We will let n8n or frontend pop it.
-        res = latest_result.copy()
-        # To avoid infinite loops, let's add a clear parameter or just clear it
-        clear = request.args.get('clear', 'true').lower() == 'true'
-        if clear:
-            latest_result = {}
+    if latest_result:
+        # Give the result to the frontend and clear it
+        res = latest_result
+        latest_result = None
         return jsonify(res)
     return jsonify({"status": "waiting"})
 
