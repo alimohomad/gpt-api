@@ -1,0 +1,254 @@
+{
+  "name": "Auto Instagram Poster via ChatGPT API",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -680,
+        500
+      ],
+      "id": "e44c207c-9b5e-4af5-b1a8-1234abcd5678",
+      "name": "Every 6 Hours"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://198.105.113.144:5000/api/prompt",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "prompt",
+              "value": "Generate a highly aesthetic, beautiful image about technology and the future without any text in the image itself. Then, provide an inspiring and deep quote about tech to use as an Instagram caption."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -460,
+        500
+      ],
+      "id": "req-1-trigger",
+      "name": "Send Prompt to ChatGPT"
+    },
+    {
+      "parameters": {
+        "amount": 35,
+        "unit": "seconds"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        -240,
+        500
+      ],
+      "id": "wait-node",
+      "name": "Wait 35 Seconds"
+    },
+    {
+      "parameters": {
+        "url": "http://198.105.113.144:5000/api/result?clear=true",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -20,
+        500
+      ],
+      "id": "req-2-fetch",
+      "name": "Get ChatGPT Result"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "imageUrl",
+              "value": "={{ $json.image_url }}"
+            },
+            {
+              "name": "captionText",
+              "value": "={{ $json.text }}\n\n#tech #future #innovation #techworld #ai"
+            },
+            {
+              "name": "Node",
+              "value": "<your node id>"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Set Image & Caption",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        200,
+        500
+      ],
+      "id": "da15b8ed-4847-4a6d-80b2-5c8a73ae5b90"
+    },
+    {
+      "parameters": {
+        "httpRequestMethod": "POST",
+        "graphApiVersion": "v22.0",
+        "node": "={{ $json.Node }}",
+        "edge": "media",
+        "options": {
+          "queryParameters": {
+            "parameter": [
+              {
+                "name": "image_url",
+                "value": "={{ $json.imageUrl }}"
+              },
+              {
+                "name": "caption",
+                "value": "={{ $json.captionText }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.facebookGraphApi",
+      "typeVersion": 1,
+      "position": [
+        420,
+        500
+      ],
+      "id": "7e234a23-86cb-4cf1-a111-2b401487b02f",
+      "name": "Creating Container ID",
+      "credentials": {
+        "facebookGraphApi": {
+          "id": "CkjhvRgDtYJYJxWo",
+          "name": "Facebook Graph account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpRequestMethod": "POST",
+        "graphApiVersion": "v22.0",
+        "node": "={{ $('Set Image & Caption').item.json.Node }}",
+        "edge": "media_publish",
+        "options": {
+          "queryParameters": {
+            "parameter": [
+              {
+                "name": "creation_id",
+                "value": "={{ $json.id }}"
+              },
+              {
+                "name": "image_url",
+                "value": "={{ $('Set Image & Caption').item.json.imageUrl }}"
+              },
+              {
+                "name": "caption",
+                "value": "={{ $('Set Image & Caption').item.json.captionText }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.facebookGraphApi",
+      "typeVersion": 1,
+      "position": [
+        640,
+        500
+      ],
+      "id": "9210b489-e0b9-47e1-afc0-b9ab79c9dfc2",
+      "name": "Facebook Graph API",
+      "credentials": {
+        "facebookGraphApi": {
+          "id": "CkjhvRgDtYJYJxWo",
+          "name": "Facebook Graph account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every 6 Hours": {
+      "main": [
+        [
+          {
+            "node": "Send Prompt to ChatGPT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Prompt to ChatGPT": {
+      "main": [
+        [
+          {
+            "node": "Wait 35 Seconds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 35 Seconds": {
+      "main": [
+        [
+          {
+            "node": "Get ChatGPT Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get ChatGPT Result": {
+      "main": [
+        [
+          {
+            "node": "Set Image & Caption",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Image & Caption": {
+      "main": [
+        [
+          {
+            "node": "Creating Container ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Creating Container ID": {
+      "main": [
+        [
+          {
+            "node": "Facebook Graph API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
