@@ -9,9 +9,10 @@ function pollApi() {
                 console.log("[StreamInsight Background] Received prompt from Python API:", data.prompt);
                 
                 // Find ChatGPT tab and send the prompt to it
-                chrome.tabs.query({ url: "*://*.chatgpt.com/*" }, (tabs) => {
-                    if (tabs.length > 0) {
-                        let targetTab = tabs.find(t => t.active) || tabs[0];
+                chrome.tabs.query({}, (tabs) => {
+                    let chatgptTabs = tabs.filter(t => t.url && t.url.includes("chatgpt.com"));
+                    if (chatgptTabs.length > 0) {
+                        let targetTab = chatgptTabs.find(t => t.active) || chatgptTabs[0];
                         chrome.tabs.sendMessage(targetTab.id, { type: "TRIGGER_PROMPT", text: data.prompt });
                     }
                 });

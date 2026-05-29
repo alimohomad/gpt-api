@@ -70,10 +70,11 @@ function triggerRemotePrompt() {
     const text = popupInput.value.trim();
     if (!text) return;
 
-    chrome.tabs.query({ url: "*://*.chatgpt.com/*" }, (tabs) => {
-        if (tabs.length > 0) {
+    chrome.tabs.query({}, (tabs) => {
+        let chatgptTabs = tabs.filter(t => t.url && t.url.includes("chatgpt.com"));
+        if (chatgptTabs.length > 0) {
             // Prefer the active tab if it's chatgpt, else pick the first chatgpt tab
-            let targetTab = tabs.find(t => t.active) || tabs[0];
+            let targetTab = chatgptTabs.find(t => t.active) || chatgptTabs[0];
             
             chrome.tabs.sendMessage(targetTab.id, { type: "TRIGGER_PROMPT", text: text }, (response) => {
                 if (chrome.runtime.lastError) {
