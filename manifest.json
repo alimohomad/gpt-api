@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Universal SSE Stream Capture",
+  "version": "3.0",
+  "description": "Captures SSE/ChatGPT conversation streams automatically",
+  "permissions": ["storage"],
+  "host_permissions": ["<all_urls>"],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "web_accessible_resources": [{
+    "resources": ["injected.js", "marked.js"],
+    "matches": ["<all_urls>"]
+  }],
+  "content_scripts": [{
+    "matches": ["<all_urls>"],
+    "js": ["marked.js", "content.js"],
+    "run_at": "document_start"
+  }]
+
+}
