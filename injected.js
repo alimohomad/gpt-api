@@ -65,7 +65,10 @@
                         const trimmed = line.trim();
                         if (trimmed.startsWith("data: ")) {
                             const raw = trimmed.slice(6);
-                            if (raw === "[DONE]") continue;
+                            if (raw === "[DONE]") {
+                                window.postMessage({ type: "STREAM_DONE" }, "*");
+                                continue;
+                            }
                             try {
                                 const json = JSON.parse(raw);
                                 handleJson(json);

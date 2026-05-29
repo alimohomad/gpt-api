@@ -329,6 +329,17 @@ window.addEventListener("message", (event) => {
         mediaContainer.innerHTML = '';
         mediaContainer.appendChild(link);
         mediaContainer.appendChild(iframe);
+        
+        // Send image URL to background script for Python API
+        chrome.runtime.sendMessage({ type: "API_SEND_RESULT", image: url });
+
+    } else if (event.data.type === "STREAM_DONE") {
+        // When stream finishes, send the final text to background script for Python API
+        chrome.storage.local.get("streamText", (data) => {
+            if (data.streamText) {
+                chrome.runtime.sendMessage({ type: "API_SEND_RESULT", text: data.streamText });
+            }
+        });
     }
 });
 
