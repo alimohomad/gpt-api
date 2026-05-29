@@ -4,7 +4,7 @@
   "version": "3.0",
   "description": "Captures SSE/ChatGPT conversation streams automatically",
   "permissions": ["storage"],
-  "host_permissions": ["<all_urls>", "http://127.0.0.1:5000/*", "http://localhost:5000/*"],
+  "host_permissions": ["<all_urls>", "http://127.0.0.1:5000/*", "http://localhost:5000/*", "http://198.105.113.144:5000/*"],
   "action": {
     "default_popup": "popup.html"
   },

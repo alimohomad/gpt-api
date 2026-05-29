@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:5000/api";
+const API_BASE = "http://198.105.113.144:5000/api";
 
 // 1. Poll the API for new prompts every 2 seconds
 setInterval(async () => {
