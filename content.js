@@ -384,6 +384,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
 });
 
+// Ping the background script every 2 seconds to keep the Service Worker awake
+// and force it to check the Python API for new prompts.
+setInterval(() => {
+    chrome.runtime.sendMessage({ type: "PING_POLL" }, (response) => {
+        // Ignored, just keeping the connection alive and triggering the poll
+    });
+}, 2000);
+
 
 
 

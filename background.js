@@ -1,7 +1,7 @@
 const API_BASE = "http://198.105.113.144:5000/api";
 
-// Create an alarm to poll every 2 seconds (note: alarms in MV3 are typically restricted to 1 min, but we can combine it with a recursive timeout for active polling while awake)
-function pollApi() {
+// Check the Python API for prompts
+function checkPythonApi() {
     fetch(`${API_BASE}/prompt`)
         .then(res => res.json())
         .then(data => {
@@ -20,19 +20,15 @@ function pollApi() {
         })
         .catch(e => {
             // API probably not running, ignore
-        })
-        .finally(() => {
-            // Schedule the next poll
-            setTimeout(pollApi, 2000);
         });
 }
 
-// Start polling
-pollApi();
-
 // Keep service worker alive by listening to messages
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.type === "API_SEND_RESULT") {
+    if (message.type === "PING_POLL") {
+        checkPythonApi();
+        sendResponse({ success: true });
+    } else if (message.type === "API_SEND_RESULT") {
         const payload = {};
         if (message.text) payload.text = message.text;
         if (message.image) payload.image_url = message.image;
