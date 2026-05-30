@@ -355,31 +355,57 @@ window.addEventListener("message", (event) => {
 });
 
 // Listen for messages from the extension popup
+function executePrompt(text) {
+    const chatInput = document.getElementById("prompt-textarea");
+    if (chatInput) {
+        chatInput.focus();
+        document.execCommand('insertText', false, text);
+        chatInput.dispatchEvent(new Event('input', { bubbles: true }));
+        
+        setTimeout(() => {
+            const chatSendBtn = document.querySelector('[data-testid="send-button"]');
+            if (chatSendBtn && !chatSendBtn.disabled) {
+                chatSendBtn.click();
+            } else {
+                const enterEvent = new KeyboardEvent('keydown', {
+                    bubbles: true, cancelable: true, key: 'Enter', code: 'Enter', keyCode: 13, which: 13
+                });
+                chatInput.dispatchEvent(enterEvent);
+            }
+        }, 150);
+    } else {
+        console.error("[StreamInsight] Could not find #prompt-textarea on the page");
+    }
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === "TRIGGER_PROMPT") {
-        const text = message.text;
-        const chatInput = document.getElementById("prompt-textarea");
-        if (chatInput) {
-            chatInput.focus();
-            document.execCommand('insertText', false, text);
-            chatInput.dispatchEvent(new Event('input', { bubbles: true }));
-            
-            setTimeout(() => {
-                const chatSendBtn = document.querySelector('[data-testid="send-button"]');
-                if (chatSendBtn && !chatSendBtn.disabled) {
-                    chatSendBtn.click();
-                } else {
-                    const enterEvent = new KeyboardEvent('keydown', {
-                        bubbles: true, cancelable: true, key: 'Enter', code: 'Enter', keyCode: 13, which: 13
-                    });
-                    chatInput.dispatchEvent(enterEvent);
-                }
-            }, 150);
-            sendResponse({ success: true });
-        } else {
-            console.error("[StreamInsight] Could not find #prompt-textarea on the page");
-            sendResponse({ success: false });
+        let count = parseInt(sessionStorage.getItem("promptCounter") || "0");
+        count++;
+        
+        // After 4 inputs (so on the 5th input), reset the context
+        if (count >= 5) {
+            const projectBtn = document.querySelector('a[href="/g/g-p-6a1a638ee8308191b952fe14aff28f24-api/project"]');
+            if (projectBtn) {
+                console.log("[StreamInsight] Resetting context: clicking API project button...");
+                projectBtn.click();
+                sessionStorage.setItem("promptCounter", "1"); // Reset count (1 for this new prompt)
+                
+                // Wait for the React router to finish navigating and re-rendering the chat box
+                setTimeout(() => {
+                    executePrompt(message.text);
+                }, 3500);
+                
+                sendResponse({ success: true });
+                return true;
+            } else {
+                console.warn("[StreamInsight] Project button not found, continuing without reset.");
+            }
         }
+        
+        sessionStorage.setItem("promptCounter", count.toString());
+        executePrompt(message.text);
+        sendResponse({ success: true });
     }
     return true;
 });
