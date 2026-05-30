@@ -359,20 +359,37 @@ function executePrompt(text) {
     const chatInput = document.getElementById("prompt-textarea");
     if (chatInput) {
         chatInput.focus();
+        
+        // Clear any existing text first to avoid appending to leftover text
+        chatInput.innerHTML = ''; 
+        
+        // Insert text using execCommand which works best with contenteditable/ProseMirror
         document.execCommand('insertText', false, text);
         chatInput.dispatchEvent(new Event('input', { bubbles: true }));
         
-        setTimeout(() => {
+        let attempts = 0;
+        const trySend = () => {
             const chatSendBtn = document.querySelector('[data-testid="send-button"]');
-            if (chatSendBtn && !chatSendBtn.disabled) {
+            
+            // In ChatGPT, the button might not have the 'disabled' property but might have 'disabled' attribute, or React handles it.
+            if (chatSendBtn && !chatSendBtn.disabled && !chatSendBtn.hasAttribute('disabled')) {
                 chatSendBtn.click();
+            } else if (attempts < 15) {
+                attempts++;
+                // Poke React again
+                chatInput.dispatchEvent(new Event('input', { bubbles: true }));
+                setTimeout(trySend, 200);
             } else {
+                console.warn("[StreamInsight] Send button didn't enable. Forcing Enter key.");
                 const enterEvent = new KeyboardEvent('keydown', {
                     bubbles: true, cancelable: true, key: 'Enter', code: 'Enter', keyCode: 13, which: 13
                 });
                 chatInput.dispatchEvent(enterEvent);
             }
-        }, 150);
+        };
+        
+        // Start trying to send after a short delay
+        setTimeout(trySend, 200);
     } else {
         console.error("[StreamInsight] Could not find #prompt-textarea on the page");
     }
